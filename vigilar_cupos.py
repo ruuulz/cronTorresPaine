@@ -170,7 +170,7 @@ def consultar():
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
                       "(KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
     })
-    with urllib.request.urlopen(req, timeout=60) as r:
+    with urllib.request.urlopen(req, timeout=20) as r:
         return json.loads(r.read().decode("utf-8"))
 
 
@@ -258,7 +258,7 @@ def _enviar_discord(url, texto, mencionar=True):
                      # Discord rechaza el User-Agent por defecto de Python
                      "User-Agent": "vigilar-cupos/1.0"})
         try:
-            urllib.request.urlopen(req, timeout=30).read()
+            urllib.request.urlopen(req, timeout=10).read()
             return
         except urllib.error.HTTPError as e:
             if e.code == 429:  # demasiados mensajes seguidos: esperar lo que pide Discord
@@ -290,7 +290,7 @@ def avisar(texto, sitio=None, mencionar=True):
     datos = urllib.parse.urlencode({"chat_id": TELEGRAM_CHAT_ID, "text": texto}).encode()
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
     try:
-        urllib.request.urlopen(url, data=datos, timeout=30).read()
+        urllib.request.urlopen(url, data=datos, timeout=10).read()
     except Exception as e:
         print(f"No se pudo enviar a Telegram: {e}", file=sys.stderr)
 
