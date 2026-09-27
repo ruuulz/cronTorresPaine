@@ -23,6 +23,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Revisar cupos
+        id: revisar
         continue-on-error: true   # el script ya avisa los errores por Discord
         env:
           TZ: America/Santiago    # para que la hora de los mensajes sea la de Chile
@@ -42,3 +43,13 @@ jobs:
           git commit -m "Actualizar estado de cupos"
           git pull --rebase --autostash || true
           git push
+
+      # Si hubo alerta CSM, la ejecución falla a propósito para que GitHub mande un mail.
+      # Va al final para que el estado ya esté guardado.
+      - name: "🚨 CSM! Se liberaron cupos"
+        if: steps.revisar.outputs.alerta == 'true'
+        env:
+          MENSAJE: ${{ steps.revisar.outputs.mensaje }}
+        run: |
+          echo "::error title=CSM! Se liberaron cupos::$MENSAJE"
+          exit 1
