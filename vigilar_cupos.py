@@ -50,8 +50,8 @@ DISCORD_MENCION = os.environ.get("DISCORD_MENCION") or "<@350749732122918912>"  
 # Opcional: un canal de Discord distinto por sitio. Los sitios que no estén aquí
 # (o que tengan "") usan DISCORD_WEBHOOK_URL.
 DISCORD_WEBHOOK_POR_SITIO = {
-    "Paine Grande": "",
     "Grey": "",
+    "Paine Grande": "",
 }
 
 # Telegram (opcional). Si no hay ningún canal definido, los avisos se imprimen en consola.
