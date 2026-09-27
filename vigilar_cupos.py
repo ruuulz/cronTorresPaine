@@ -40,7 +40,7 @@ RESUMEN_EN_CADA_EJECUCION = True
 
 # False = los resúmenes "sin cambios" llegan sin mencionarte (sin notificación al
 # celular). Las alertas de cupos liberados, los cambios y los errores siempre te mencionan.
-MENCIONAR_EN_RESUMEN = False
+MENCIONAR_EN_RESUMEN = True
 
 # Discord (opcional): URL del webhook del canal donde quieres las alertas.
 # Se toma del secret DISCORD_WEBHOOK_URL de GitHub (no lo escribas aquí).
