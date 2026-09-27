@@ -18,7 +18,7 @@ concurrency:
 jobs:
   vigilar:
     runs-on: ubuntu-latest
-    timeout-minutes: 5        # si algo se cuelga, no gasta más de 5 minutos
+    timeout-minutes: 2        # corta si algo se cuelga (las ráfagas de alertas caben de sobra)
     steps:
       - uses: actions/checkout@v4
 
