@@ -1,12 +1,7 @@
 name: Vigilar cupos
 
 on:
-  schedule:
-    # Cada 10 minutos (minutos 3, 13, 23, 33, 43 y 53 de cada hora).
-    # Repo público = minutos de Actions ilimitados.
-    # Se evita el minuto 0 porque es cuando GitHub tiene más atrasos.
-    - cron: "3-59/10 * * * *"
-  workflow_dispatch:          # botón "Run workflow" para ejecutarlo a mano
+  workflow_dispatch:          # lo ejecuta cron-job.org cada 10 min (y el botón "Run workflow")
 
 permissions:
   contents: write             # para guardar estado_cupos.json en el repo
