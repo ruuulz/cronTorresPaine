@@ -38,6 +38,10 @@ REPETIR_LIBERACION = 10
 # False = el mensaje por sitio llega solo cuando ese sitio cambia.
 RESUMEN_EN_CADA_EJECUCION = True
 
+# False = los resúmenes "sin cambios" llegan sin mencionarte (sin notificación al
+# celular). Las alertas de cupos liberados, los cambios y los errores siempre te mencionan.
+MENCIONAR_EN_RESUMEN = False
+
 # Discord (opcional): URL del webhook del canal donde quieres las alertas.
 # Se toma del secret DISCORD_WEBHOOK_URL de GitHub (no lo escribas aquí).
 DISCORD_WEBHOOK_URL = os.environ.get("DISCORD_WEBHOOK_URL", "")
@@ -240,8 +244,11 @@ def _webhook(sitio=None):
     return (DISCORD_WEBHOOK_POR_SITIO.get(sitio) or DISCORD_WEBHOOK_URL) if sitio else DISCORD_WEBHOOK_URL
 
 
-def _enviar_discord(url, texto):
-    contenido = f"{DISCORD_MENCION} {texto}".strip()[:2000]  # límite de Discord
+def _enviar_discord(url, texto, mencionar=True):
+    contenido = texto
+    if mencionar and DISCORD_MENCION:
+        contenido += f"\n{DISCORD_MENCION}"
+    contenido = contenido[:2000]  # límite de Discord
     cuerpo = json.dumps({"content": contenido,
                          "allowed_mentions": {"parse": ["everyone", "users", "roles"]}}).encode()
     for intento in range(5):
@@ -268,16 +275,16 @@ def _enviar_discord(url, texto):
             return
 
 
-def avisar(texto, sitio=None):
+def avisar(texto, sitio=None, mencionar=True):
     """Envía un aviso. Con sitio, usa el canal de ese sitio si está configurado."""
     print(texto)
     url = _webhook(sitio)
     if url:
-        _enviar_discord(url, texto)
+        _enviar_discord(url, texto, mencionar)
     elif sitio is None:
         # Aviso general sin canal general: mandarlo a los canales de cada sitio
         for u in dict.fromkeys(u for u in DISCORD_WEBHOOK_POR_SITIO.values() if u):
-            _enviar_discord(u, texto)
+            _enviar_discord(u, texto, mencionar)
     if not (TELEGRAM_TOKEN and TELEGRAM_CHAT_ID):
         return
     datos = urllib.parse.urlencode({"chat_id": TELEGRAM_CHAT_ID, "text": texto}).encode()
@@ -292,11 +299,19 @@ def _sitio(clave):
     return clave.split("|")[0]
 
 
+DIAS_SEMANA = ["lun", "mar", "mié", "jue", "vie", "sáb", "dom"]
+
+
+def _dia(fecha_iso):
+    """'2026-11-25' -> 'mié 25/11'."""
+    d = date.fromisoformat(fecha_iso)
+    return f"{DIAS_SEMANA[d.weekday()]} {d.day:02d}/{d.month:02d}"
+
+
 def _fmt_clave(clave):
-    """'Tipo · DD-MM' (el sitio va en el título del mensaje)."""
+    """'Camping · mié 25/11' (el sitio va en el título del mensaje)."""
     _, tipo, f = clave.split("|")
-    d = date.fromisoformat(f)
-    return f"{tipo} · {d.day:02d}-{d.month:02d}"
+    return f"{tipo} · {_dia(f)}"
 
 
 def _por_sitio(cupos):
@@ -306,9 +321,25 @@ def _por_sitio(cupos):
     return grupos
 
 
-def tabla(cupos):
-    return "\n".join(f"• {_fmt_clave(k)}: {'—' if v is None else v}"
-                     for k, v in sorted(cupos.items()))
+def tabla(grupo, marcas=None):
+    """Tabla de un sitio: una fila por día, una columna por tipo.
+    marcas = {clave: "↑" o "↓"} para señalar las celdas que cambiaron."""
+    if not grupo:
+        return "_(sin datos)_"
+    marcas = marcas or {}
+    sitio = _sitio(next(iter(grupo)))
+    tipos = sorted({k.split("|")[1] for k in grupo})
+    fechas = sorted({k.split("|")[2] for k in grupo})
+    anchos = [max(len(t), 3) + 2 for t in tipos]
+    lineas = [" " * 9 + "".join((t + " ").rjust(w) for t, w in zip(tipos, anchos))]
+    for f in fechas:
+        fila = _dia(f).ljust(9)
+        for t, w in zip(tipos, anchos):
+            k = f"{sitio}|{t}|{f}"
+            v = grupo.get(k)
+            fila += (("—" if v is None else str(v)) + marcas.get(k, " ")).rjust(w)
+        lineas.append(fila.rstrip())
+    return "```\n" + "\n".join(lineas) + "\n```"
 
 
 # ------------------------------ Principal ------------------------------
@@ -326,7 +357,7 @@ def guardar_estado(estado):
 def main():
     if "--test" in sys.argv:
         for sitio in ALOJAMIENTOS:
-            avisar(f"✅ Prueba de alerta para 📍 {sitio}.", sitio)
+            avisar(f"### ✅ Prueba de alerta · {sitio}\nSi ves esto, las notificaciones funcionan.", sitio)
         return
 
     estado = cargar_estado()
@@ -340,7 +371,7 @@ def main():
         print(f"[{ahora}] ERROR: {e}", file=sys.stderr)
         # Avisar el error solo una vez para no llenarte de mensajes
         if "--ver" not in sys.argv and not estado.get("error"):
-            avisar(f"⚠️ El monitor de cupos falló:\n{e}\n"
+            avisar(f"## ⚠️ El monitor de cupos falló\n```\n{e}\n```\n"
                    "Puede que el reporte haya cambiado. Te aviso cuando vuelva a funcionar.")
             estado["error"] = True
             guardar_estado(estado)
@@ -353,11 +384,11 @@ def main():
 
     anteriores = estado.get("cupos")
     if estado.get("error"):
-        avisar("✅ El monitor de cupos volvió a funcionar.")
+        avisar("### ✅ El monitor de cupos volvió a funcionar")
 
     anteriores = anteriores or {}
     primera_vez = not anteriores
-    cambios_por_sitio, liberados_por_sitio = {}, {}
+    cambios_por_sitio, liberados_por_sitio, marcas = {}, {}, {}
     if not primera_vez:
         for k in sorted(set(cupos) | set(anteriores)):
             antes, ahora_v = anteriores.get(k), cupos.get(k)
@@ -371,39 +402,45 @@ def main():
             if SOLO_AVISAR_SI_AUMENTA and not subio:
                 continue
             flecha = "⬆️" if subio else "⬇️"
+            marcas[k] = "↑" if subio else "↓"
             cambios_por_sitio.setdefault(_sitio(k), []).append(
-                f"{flecha} {_fmt_clave(k)}: {antes if antes is not None else '—'}"
-                f" → {ahora_v if ahora_v is not None else '—'}")
+                f"{flecha} **{_fmt_clave(k)}:** {antes if antes is not None else '—'}"
+                f" → **{ahora_v if ahora_v is not None else '—'}**")
 
     grupos = _por_sitio(cupos)
     hora = datetime.now().strftime("%H:%M")
     for sitio in ALOJAMIENTOS:
         grupo = grupos.get(sitio)
         if not grupo:
-            avisar(f"⚠️ 📍 {sitio}: el reporte no devolvió datos para este sitio. "
+            avisar(f"### ⚠️ {sitio}\nEl reporte no devolvió datos para este sitio. "
                    "Revisa que el nombre esté escrito igual que en el Power BI.", sitio)
             continue
 
         # 1) Alertas extra: 10 mensajes por cada día que liberó cupos
         for fecha, n in sorted(liberados_por_sitio.get(sitio, {}).items()):
             d = date.fromisoformat(fecha)
-            grito = MENSAJE_LIBERACION.format(n=n, sitio=sitio.upper(),
-                                              dia=f"{d.day:02d}-{d.month:02d}")
+            grito = "## 🚨 " + MENSAJE_LIBERACION.format(n=n, sitio=sitio.upper(),
+                                                        dia=f"{d.day:02d}-{d.month:02d}")
             for _ in range(REPETIR_LIBERACION):
                 avisar(grito, sitio)
                 time.sleep(1)  # para no chocar con el límite de Discord
 
         # 2) Notificación del sitio con sus días y números
         cambios = cambios_por_sitio.get(sitio)
+        sitio_marcas = {k: m for k, m in marcas.items() if _sitio(k) == sitio}
         if primera_vez:
-            titulo = f"🏕️ Monitor iniciado · 📍 {sitio}"
+            texto = f"## 🏕️ {sitio}\n-# Monitor iniciado · {hora}\n{tabla(grupo)}"
+            mencionar = MENCIONAR_EN_RESUMEN
         elif cambios:
-            titulo = f"🚨 Cambio de cupos · 📍 {sitio}\n" + "\n".join(cambios) + "\n"
+            texto = (f"## 🔔 {sitio} · hay cambios\n" + "\n".join(cambios)
+                     + f"\n{tabla(grupo, sitio_marcas)}\n-# {hora}")
+            mencionar = True
         elif RESUMEN_EN_CADA_EJECUCION:
-            titulo = f"📍 {sitio} · sin cambios"
+            texto = f"### 📍 {sitio}\n-# Sin cambios · {hora}\n{tabla(grupo)}"
+            mencionar = MENCIONAR_EN_RESUMEN
         else:
             continue
-        avisar(f"{titulo}\n📅 Cupos actuales ({hora}):\n{tabla(grupo)}", sitio)
+        avisar(texto, sitio, mencionar)
 
     if not primera_vez and not cambios_por_sitio:
         print(f"[{ahora}] Sin cambios.")
