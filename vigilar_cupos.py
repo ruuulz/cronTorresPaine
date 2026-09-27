@@ -24,7 +24,7 @@ from pathlib import Path
 # ============================ CONFIGURACIÓN ============================
 FECHA_DESDE = "2026-11-24"            # primer día a vigilar
 FECHA_HASTA = "2026-11-26"            # último día a vigilar (incluido)
-ALOJAMIENTOS = ["Paine Grande", "Grey"]  # puedes poner varios
+ALOJAMIENTOS = ["Grey", "Paine Grande"]  # el orden de la lista = orden de las notificaciones
 EXCLUIR_DETALLE = ["Sitios Grupales"] # mismo filtro que usa el reporte
 SOLO_AVISAR_SI_AUMENTA = False        # True = avisar solo cuando se liberan cupos
 
@@ -40,7 +40,7 @@ RESUMEN_EN_CADA_EJECUCION = True
 
 # False = los resúmenes "sin cambios" llegan sin mencionarte (sin notificación al
 # celular). Las alertas de cupos liberados, los cambios y los errores siempre te mencionan.
-MENCIONAR_EN_RESUMEN = True
+MENCIONAR_EN_RESUMEN = False
 
 # Discord (opcional): URL del webhook del canal donde quieres las alertas.
 # Se toma del secret DISCORD_WEBHOOK_URL de GitHub (no lo escribas aquí).
@@ -50,8 +50,8 @@ DISCORD_MENCION = os.environ.get("DISCORD_MENCION") or "<@350749732122918912>"  
 # Opcional: un canal de Discord distinto por sitio. Los sitios que no estén aquí
 # (o que tengan "") usan DISCORD_WEBHOOK_URL.
 DISCORD_WEBHOOK_POR_SITIO = {
-    "Grey": "",
     "Paine Grande": "",
+    "Grey": "",
 }
 
 # Telegram (opcional). Si no hay ningún canal definido, los avisos se imprimen en consola.
@@ -389,6 +389,7 @@ def main():
     anteriores = anteriores or {}
     primera_vez = not anteriores
     cambios_por_sitio, liberados_por_sitio, marcas = {}, {}, {}
+    gritos = []
     if not primera_vez:
         for k in sorted(set(cupos) | set(anteriores)):
             antes, ahora_v = anteriores.get(k), cupos.get(k)
@@ -421,6 +422,7 @@ def main():
             d = date.fromisoformat(fecha)
             grito = "## 🚨 " + MENSAJE_LIBERACION.format(n=n, sitio=sitio.upper(),
                                                         dia=f"{d.day:02d}-{d.month:02d}")
+            gritos.append(grito.replace("## 🚨 ", ""))
             for _ in range(REPETIR_LIBERACION):
                 avisar(grito, sitio)
                 time.sleep(1)  # para no chocar con el límite de Discord
@@ -444,6 +446,13 @@ def main():
 
     if not primera_vez and not cambios_por_sitio:
         print(f"[{ahora}] Sin cambios.")
+
+    # En GitHub Actions: avisar al workflow que hubo alerta CSM (para que falle y mande mail)
+    salida = os.environ.get("GITHUB_OUTPUT")
+    if salida and gritos:
+        with open(salida, "a", encoding="utf-8") as f:
+            f.write("alerta=true\n")
+            f.write("mensaje=" + " | ".join(gritos) + "\n")
 
     guardar_estado({"cupos": cupos, "actualizado": ahora, "error": False})
 
