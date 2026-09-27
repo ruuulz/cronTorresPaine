@@ -45,7 +45,7 @@ MENCIONAR_EN_RESUMEN = False
 # Discord (opcional): URL del webhook del canal donde quieres las alertas.
 # Se toma del secret DISCORD_WEBHOOK_URL de GitHub (no lo escribas aquí).
 DISCORD_WEBHOOK_URL = os.environ.get("DISCORD_WEBHOOK_URL", "")
-DISCORD_MENCION = os.environ.get("DISCORD_MENCION") or "<@350749732122918912>"  # @rulz1
+DISCORD_MENCION = os.environ.get("DISCORD_MENCION") or "<@350749732122918912>"  # @rulz1 (en el servidor se ve como su apodo)
 
 # Opcional: un canal de Discord distinto por sitio. Los sitios que no estén aquí
 # (o que tengan "") usan DISCORD_WEBHOOK_URL.
@@ -176,8 +176,10 @@ def consultar():
 
 # ----------------------------- Parsear DSR -----------------------------
 def _items(lista, clave, esquemas, dicts):
-    """Recorre una lista DSR resolviendo esquema (S), repetidos (R), nulos (Ø) y diccionarios."""
-    previo = {}
+    """Recorre una lista DSR resolviendo esquema (S), repetidos (R), nulos (Ø) y diccionarios.
+    R = "igual al último valor enviado", que puede venir de la fila anterior,
+    por eso el valor previo se mantiene entre listas del mismo tipo."""
+    previo = esquemas.setdefault("previo:" + clave, {})
     for it in lista:
         if "S" in it:
             esquemas[clave] = it["S"]
@@ -195,8 +197,9 @@ def _items(lista, clave, esquemas, dicts):
                 if "DN" in s and isinstance(v, int):
                     v = dicts[s["DN"]][v]
             vals[n] = v
-        previo = vals
-        yield it, vals
+        previo.clear()
+        previo.update(vals)
+        yield it, dict(vals)
 
 
 def parsear(respuesta):
@@ -337,7 +340,7 @@ def tabla(grupo, marcas=None):
         for t, w in zip(tipos, anchos):
             k = f"{sitio}|{t}|{f}"
             v = grupo.get(k)
-            fila += (("—" if v is None else str(v)) + marcas.get(k, " ")).rjust(w)
+            fila += (str(v or 0) + marcas.get(k, " ")).rjust(w)
         lineas.append(fila.rstrip())
     return "```\n" + "\n".join(lineas) + "\n```"
 
@@ -393,7 +396,7 @@ def main():
     if not primera_vez:
         for k in sorted(set(cupos) | set(anteriores)):
             antes, ahora_v = anteriores.get(k), cupos.get(k)
-            if antes == ahora_v:
+            if (antes or 0) == (ahora_v or 0):   # vacío en el Power BI = 0 cupos
                 continue
             subio = (ahora_v or 0) > (antes or 0)
             if subio:
@@ -405,8 +408,7 @@ def main():
             flecha = "⬆️" if subio else "⬇️"
             marcas[k] = "↑" if subio else "↓"
             cambios_por_sitio.setdefault(_sitio(k), []).append(
-                f"{flecha} **{_fmt_clave(k)}:** {antes if antes is not None else '—'}"
-                f" → **{ahora_v if ahora_v is not None else '—'}**")
+                f"{flecha} **{_fmt_clave(k)}:** {antes or 0} → **{ahora_v or 0}**")
 
     grupos = _por_sitio(cupos)
     hora = datetime.now().strftime("%H:%M")
