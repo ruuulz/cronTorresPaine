@@ -22,7 +22,7 @@ from datetime import date, datetime, timedelta
 from pathlib import Path
 
 # ============================ CONFIGURACIÓN ============================
-FECHA_DESDE = "2026-11-24"            # primer día a vigilar
+FECHA_DESDE = "2026-11-25"            # primer día a vigilar
 FECHA_HASTA = "2026-11-26"            # último día a vigilar (incluido)
 ALOJAMIENTOS = ["Grey", "Paine Grande"]  # el orden de la lista = orden de las notificaciones
 EXCLUIR_DETALLE = ["Sitios Grupales"] # mismo filtro que usa el reporte
@@ -31,7 +31,7 @@ SOLO_AVISAR_SI_AUMENTA = False        # True = avisar solo cuando se liberan cup
 # Alarma fuerte cuando se liberan cupos: se repite N veces por cada DÍA que libera cupos.
 # {n} = cupos liberados ese día, {sitio} = sitio en mayúsculas, {dia} = "24-11".
 MENSAJE_LIBERACION = "CSM ! SE LIBERARON {n} EN {sitio} EL {dia} CSM"
-REPETIR_LIBERACION = 10
+REPETIR_LIBERACION = 1
 
 # True = en CADA ejecución llega un mensaje por sitio con sus días y cupos,
 #        aunque no haya cambios (con la tarea cada 10 min = 1 mensaje por sitio cada 10 min).
