@@ -446,6 +446,23 @@ def main():
             continue
         avisar(texto, sitio, mencionar)
 
+    # 3) Si hubo ola de alertas, cerrar con el resumen de todos los sitios
+    if gritos:
+        bloques = []
+        for sitio in ALOJAMIENTOS:
+            grupo = grupos.get(sitio)
+            if grupo:
+                sm = {k: m for k, m in marcas.items() if _sitio(k) == sitio}
+                bloques.append(f"**📍 {sitio}**\n{tabla(grupo, sm)}")
+        titulo = f"## 📋 Resumen después de la alerta\n-# {hora} · ↑ = subió, ↓ = bajó\n"
+        texto = titulo + "\n".join(bloques)
+        if len(texto) <= 1900:
+            avisar(texto, mencionar=False)
+        else:  # muy largo para un mensaje de Discord: uno por sitio
+            avisar(titulo.rstrip(), mencionar=False)
+            for b in bloques:
+                avisar(b, mencionar=False)
+
     if not primera_vez and not cambios_por_sitio:
         print(f"[{ahora}] Sin cambios.")
 
