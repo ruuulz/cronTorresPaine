@@ -1,14 +1,14 @@
 {
   "cupos": {
     "Grey|Camping|2026-11-25": 0,
-    "Grey|Camping|2026-11-26": 1,
+    "Grey|Camping|2026-11-26": 7,
     "Grey|Refugio|2026-11-25": 0,
-    "Grey|Refugio|2026-11-26": 1,
-    "Paine Grande|Camping|2026-11-25": 2,
+    "Grey|Refugio|2026-11-26": 0,
+    "Paine Grande|Camping|2026-11-25": 3,
     "Paine Grande|Camping|2026-11-26": 1,
     "Paine Grande|Refugio|2026-11-25": 1,
     "Paine Grande|Refugio|2026-11-26": 0
   },
-  "actualizado": "2026-09-30 14:30",
+  "actualizado": "2026-09-30 14:40",
   "error": false
 }
