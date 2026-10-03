@@ -24,7 +24,7 @@ from pathlib import Path
 # ============================ CONFIGURACIÓN ============================
 FECHA_DESDE = "2026-11-25"            # primer día a vigilar
 FECHA_HASTA = "2026-11-26"            # último día a vigilar (incluido)
-ALOJAMIENTOS = ["Grey", "Paine Grande"]  # nombre EXACTO del Power BI; el orden = orden en los mensajes
+ALOJAMIENTOS = ["Grey"]  # nombre EXACTO del Power BI; el orden = orden en los mensajes
 NOMBRES_CORTOS = {"Paine Grande": "Paine"}  # solo para mostrar en Discord
 EXCLUIR_DETALLE = ["Sitios Grupales"] # mismo filtro que usa el reporte
 SOLO_AVISAR_SI_AUMENTA = False        # True = avisar solo cuando se liberan cupos
