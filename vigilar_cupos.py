@@ -31,7 +31,7 @@ SOLO_AVISAR_SI_AUMENTA = False        # True = avisar solo cuando se liberan cup
 
 # Alarma fuerte cuando se liberan cupos: se repite N veces por cada DÍA que libera cupos.
 # {n} = cupos liberados ese día, {sitio} = sitio en mayúsculas, {dia} = "24-11".
-MENSAJE_LIBERACION = "CSM ! SE LIBERARON {n} EN {sitio} EL {dia} CSM"
+MENSAJE_LIBERACION = "SE LIBERARON {n} EN {sitio} EL {dia} CSM"
 REPETIR_LIBERACION = 1
 
 # True = en CADA ejecución llega un mensaje por sitio con sus días y cupos,
